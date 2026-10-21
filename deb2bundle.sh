@@ -256,7 +256,8 @@ if [[ -n "$FOREIGN_ARCHES" ]]; then
     IFS=',' read -r -a arches <<< "$FOREIGN_ARCHES"
     for arch in "${arches[@]}"; do
         [[ -n "$arch" ]] || continue
-        if ! dpkg --print-foreign-architectures | grep -qx "$arch"; then
+        have_arches=" $(dpkg --print-foreign-architectures | tr '\n' ' ') "
+        if [[ "$have_arches" != *" $arch "* ]]; then
             dpkg --add-architecture "$arch"
             ADDED_ARCHES+=("$arch")
         fi
@@ -495,18 +496,21 @@ compgen -G "$WORK/out/debs/*.deb" >/dev/null ||
 # Collect metadata for the installer's welcome screen.
 # --------------------------------------------------------------------
 read_meta() {
-    local idx="$WORK/out/Packages.gz" first=${NAMES[0]%%:*} st
+    local idx="$WORK/out/Packages.gz" txt="$WORK/Packages.txt" first=${NAMES[0]%%:*} st
 
-    N_PKGS=$(zcat "$idx" | grep -c '^Package:' || true)
-    TOTAL_KB=$(zcat "$idx" | awk '/^Installed-Size:/ { s += $2 } END { print s + 0 }')
 
-    st=$(zcat "$idx" | awk -v want="$first" '
+    zcat "$idx" > "$txt"
+
+    N_PKGS=$(grep -c '^Package:' "$txt" || true)
+    TOTAL_KB=$(awk '/^Installed-Size:/ { s += $2 } END { print s + 0 }' "$txt")
+
+    st=$(awk -v want="$first" '
         BEGIN { RS = ""; FS = "\n" }
-        { for (i = 1; i <= NF; i++) if ($i == "Package: " want) { print; exit } }')
+        { for (i = 1; i <= NF; i++) if ($i == "Package: " want) { print; exit } }' "$txt")
 
-    APP_VERSION=$(sed -n 's/^Version: //p'  <<< "$st" | head -n1)
-    APP_URL=$(sed -n 's/^Homepage: //p'     <<< "$st" | head -n1)
-    APP_SUMMARY=$(sed -n 's/^Description: //p' <<< "$st" | head -n1)
+    APP_VERSION=$(sed -n '/^Version: /{s///;p;q;}'  <<< "$st")
+    APP_URL=$(sed -n '/^Homepage: /{s///;p;q;}'     <<< "$st")
+    APP_SUMMARY=$(sed -n '/^Description: /{s///;p;q;}' <<< "$st")
     APP_DESC=$(awk '
         /^Description:/ { d = 1; next }
         d && /^ /       { sub(/^ /, ""); print ($0 == "." ? "" : $0); next }
