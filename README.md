@@ -56,7 +56,7 @@ Keep all three files **in the same folder**.
 
 **On the machine that builds bundles (online):**
 
-- Debian or a Debian-based system such as Ubuntu, with `bash`, `dpkg`, `tar` and `sha256sum` (Only tested on Debian but in theory should work).
+- Debian or a Debian-based system such as Ubuntu, with `bash`, `dpkg`, `tar` and `sha256sum` (only tested on Debian but in theory should work).
 - **One** of: `docker`, `podman`, or `debootstrap` (`sudo apt install debootstrap`). Deb2Bundle uses it to provide a clean minimal Debian.
 - For the graphical builder: `python3` and `python3-tk` (`sudo apt install python3-tk`). Without them the builder switches to a terminal question-and-answer mode.
 - Internet access while building.
